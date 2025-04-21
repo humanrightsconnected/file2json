@@ -49,7 +49,7 @@ file2json/
 Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/file2json.git
+git clone https://github.com/humanrightsconnected/file2json
 cd file2json
 ```
 
