@@ -12,6 +12,7 @@ A versatile Python utility that converts various file formats (Excel, CSV, TSV, 
   - JSON (.json)
   - Text (.txt, .text)
 - Multiple sheet support for Excel files
+- Smart handling of merged cells in Excel (values from merged cells are properly propagated)
 - Command-line interface
 - Configurable output path
 

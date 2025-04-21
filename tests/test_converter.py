@@ -157,3 +157,73 @@ def test_force_file_type(test_files):
     data = read_file(test_files['csv'], 'tsv')
     assert isinstance(data, list)
     assert len(data) == 3
+
+
+def test_merged_cells_excel():
+    """Test handling of merged cells in Excel files."""
+    # Create a temporary Excel file with merged cells
+    with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as temp:
+        temp_path = temp.name
+        
+        # Create a workbook with merged cells
+        import openpyxl
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        
+        # Add headers
+        ws.cell(row=1, column=1).value = "Category"
+        ws.cell(row=1, column=2).value = "Product"
+        ws.cell(row=1, column=3).value = "Price"
+        
+        # Add data with merged cells in first column
+        ws.cell(row=2, column=1).value = "Electronics"  # This value should apply to rows 2-4
+        ws.cell(row=2, column=2).value = "Laptop"
+        ws.cell(row=2, column=3).value = 1000
+        
+        ws.cell(row=3, column=2).value = "Phone"
+        ws.cell(row=3, column=3).value = 800
+        
+        ws.cell(row=4, column=2).value = "Tablet"
+        ws.cell(row=4, column=3).value = 500
+        
+        # Merge the cells in the Category column
+        ws.merge_cells('A2:A4')
+        
+        # Add a different category
+        ws.cell(row=5, column=1).value = "Books"  # This should apply to rows 5-6
+        ws.cell(row=5, column=2).value = "Fiction"
+        ws.cell(row=5, column=3).value = 20
+        
+        ws.cell(row=6, column=2).value = "Non-Fiction"
+        ws.cell(row=6, column=3).value = 25
+        
+        # Merge the cells for the second category
+        ws.merge_cells('A5:A6')
+        
+        # Save the workbook
+        wb.save(temp_path)
+    
+    try:
+        # Use our function to read the Excel file with merged cells
+        data = read_file(temp_path, 'excel')
+        
+        # Verify the data
+        sheet_data = data['Sheet']
+        
+        # Check that the merged cell values were propagated
+        assert sheet_data[0]['Category'] == 'Electronics'
+        assert sheet_data[1]['Category'] == 'Electronics'
+        assert sheet_data[2]['Category'] == 'Electronics'
+        assert sheet_data[3]['Category'] == 'Books'
+        assert sheet_data[4]['Category'] == 'Books'
+        
+        # Check other values are correct
+        assert sheet_data[0]['Product'] == 'Laptop'
+        assert sheet_data[1]['Product'] == 'Phone'
+        assert sheet_data[2]['Product'] == 'Tablet'
+        assert sheet_data[3]['Product'] == 'Fiction'
+        assert sheet_data[4]['Product'] == 'Non-Fiction'
+        
+    finally:
+        # Clean up
+        os.unlink(temp_path)

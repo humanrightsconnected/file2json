@@ -73,8 +73,47 @@ def read_file(file_path: str, file_type: Optional[str] = None) -> Any:
         # Read all sheets
         excel_file = pd.ExcelFile(file_path)
         data = {}
+        
+        # Use openpyxl to get merged cell information
+        import openpyxl
+        wb = openpyxl.load_workbook(file_path, data_only=True)
+        
         for sheet_name in excel_file.sheet_names:
             df = pd.read_excel(excel_file, sheet_name=sheet_name)
+            
+            # Process merged cells for this sheet
+            if sheet_name in wb.sheetnames:
+                ws = wb[sheet_name]
+                
+                # Get all merged cell ranges
+                merged_cells = ws.merged_cells.ranges
+                
+                # Handle merged cells that span rows
+                for merged_range in merged_cells:
+                    # Get merged cell value (from top-left cell)
+                    top_left_cell = ws.cell(row=merged_range.min_row, column=merged_range.min_col)
+                    if top_left_cell.value is None:
+                        continue
+                    
+                    # Only process if this is a column-wise merge (same column, multiple rows)
+                    if merged_range.min_col == merged_range.max_col:
+                        col_idx = merged_range.min_col - 1  # Convert to 0-based indexing
+                        
+                        # Skip if the column index is out of bounds for our dataframe
+                        if col_idx >= len(df.columns):
+                            continue
+                        
+                        col_name = df.columns[col_idx]
+                        
+                        # For each row in the merged range, apply the value
+                        for row_idx in range(merged_range.min_row - 1, merged_range.max_row):
+                            # Skip if row index is out of bounds
+                            if row_idx >= len(df):
+                                continue
+                            
+                            # Apply the merged cell value to this row
+                            df.at[row_idx, col_name] = top_left_cell.value
+            
             data[sheet_name] = df.to_dict(orient='records')
         return data
     
